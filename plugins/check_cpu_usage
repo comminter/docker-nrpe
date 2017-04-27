@@ -1,0 +1,40 @@
+#!/bin/sh
+# Version 0.2
+#
+#       ### History ###
+# V0.1          Created script from CPU Idle script
+# V0.2          Handle dicimal compare and output
+
+warn_int=${2%%.*}
+crit_int=${4%%.*}
+if [ "$1" = "-w" ] && [ "$warn_int" -gt "0" ] && [ "$3" = "-c" ] && [ "$crit_int" -gt "0" ] ; then
+        warn=`echo "$2 + 0.0"|bc|sed -r 's/^\./0./g'` ||exit 3
+        crit=`echo "$4 + 0.0"|bc|sed -r 's/^\./0./g'` ||exit 3
+        IDLE=`top -b -n2|grep Cpu|tail -1|cut -d',' -f4|awk '{print $1}'`
+        USAGE=`echo "100 - $IDLE"|bc|sed -r 's/^\./0./g'` ||exit 3
+#       echo "DEBUG:    head: ${USAGE%%.*}  tail:  ${USAGE##*.} "
+#       echo "DEBUG:    ||$USAGE_RAW||  ,  ||$USAGE||"
+        if [ $warn_int -lt ${USAGE%%.*} ];then
+                if [ $crit_int -lt ${USAGE%%.*} ]; then
+                echo "CRITICAL - CPU Usage = $USAGE %|CPU Usage=$USAGE%;$warn;$crit;;"
+                exit 2
+        else
+                echo "WARNING - CPU Usage = $USAGE %|CPU Usage=$USAGE%;$warn;$crit;;"
+                exit 1
+        fi
+else
+                echo "OK - CPU Usage = $USAGE %|CPU Usage=$USAGE%;$warn;$crit;;"
+        exit 0
+fi
+else
+        echo "$0 - Nagios Plugin for checking CPU Usage in percentage "
+        echo ""
+        echo "Usage:    $0 -w <warnlevel> -c <critlevel>"
+        echo "  = warnlevel and critlevel is warning and critical value for alerts. "
+        echo ""
+        echo "EXAMPLE:  /usr/lib64/nagios/plugins/$0 -w 80 -c 90 "
+        echo "  = This will send warning alert when CPU Usage percentage is higher than 80%, and send critical when higher than 90%"
+        echo ""
+        exit 3
+fi
+

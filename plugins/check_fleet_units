@@ -1,0 +1,41 @@
+#!/bin/bash
+
+#. /usr/lib/nagios/plugins/host_info
+
+list_units=$(curl -s --unix-socket /mnt/ROOT/var/run/fleet.sock -H "Content-Type: application/json" -X GET http://localhost/fleet/v1/state | jq '{ state: .states[].name }' | jq '.state' | sed 's/"//g')
+nb_units=$(curl -s --unix-socket /mnt/ROOT/var/run/fleet.sock -H "Content-Type: application/json" -X GET http://localhost/fleet/v1/state | jq '{ state: .states[].name }' | jq '.state' | sed 's/"//g' | wc -l)
+running_units=$(curl -s --unix-socket /mnt/ROOT/var/run/fleet.sock -H "Content-Type: application/json" -X GET http://localhost/fleet/v1/state | jq '{ state: .states[].systemdSubState }' | jq '.state' | sed 's/"//g' | grep running | wc -l)
+
+str=""
+
+let "diff_units = $nb_units - $running_units"
+
+for u in $list_units
+do
+  
+  state=$(curl -s --unix-socket /mnt/ROOT/var/run/fleet.sock -H "Content-Type: application/json" -X GET http://localhost/fleet/v1/state?unitName=$u | jq '{ state: .states[].systemdSubState }' | jq '.state' | sed 's/"//g')
+
+  if [ $state == "running" ]; then
+    activity="1"
+  else
+    activity="0"
+  fi
+
+  str="$str$u=$activity;;0 "
+
+done
+
+if [ $diff_units -eq 0 ]; then
+    echo "OK - All units are running $running_units/$nb_units |$str"
+    exit 0
+elif [ $diff_units -eq 1 ]; then
+    echo "WARNING - 1 units is not running $running_units/$nb_units |$str"
+    exit 1
+elif [ $diff_units -gt 1 ]; then
+    echo "CRITICAL - $diff_units not running $running_units/$nb_units |$str"
+    exit 2
+else
+    echo "UNKNOWN - $running_units/$nb_units"
+    exit 3
+fi
+

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+#. /usr/lib/nagios/plugins/host_info
+
+list_machines=$(curl -s --unix-socket /mnt/ROOT/var/run/fleet.sock -H "Content-Type: application/json" -X GET http://localhost/fleet/v1/machines | jq '{ state: .machines[].primaryIP }' | jq '.state' | sed 's/"//g')
+nb_machines=$1
+running_machines=$(curl -s --unix-socket /mnt/ROOT/var/run/fleet.sock -H "Content-Type: application/json" -X GET http://localhost/fleet/v1/machines | jq '{ state: .machines[].primaryIP }' | jq '.state' | sed 's/"//g' | wc -l)
+
+let "diff_machines = $nb_machines - $running_machines"
+
+if [ $diff_machines -eq 0 ]; then
+    echo "OK - All machines are online $running_machines/$nb_machines |$str"
+    exit 0
+elif [ $diff_machines -eq 1 ]; then
+    echo "WARNING - 1 machines is not online $running_machines/$nb_machines |$str"
+    exit 1
+elif [ $diff_machines -gt 1 ]; then
+    echo "CRITICAL - $diff_machines are not online $running_machines/$nb_machines |$str"
+    exit 2
+else
+    echo "UNKNOWN - $running_machines/$nb_machines"
+    exit 3
+fi

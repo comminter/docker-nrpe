@@ -15,12 +15,20 @@ else
   NRPE_EXEC="/usr/bin/nrpe"
 fi
 
-
 # Add disk plugin
 CHECKDISKS="${CHECKDISKS:-$( ls -d -1 /mnt/* || echo)}"
 if [ ! -z "$CHECKDISKS" ]; then
     NAGIOS_DRIVES="$(echo "$CHECKDISKS" | awk -F "[ \t\n,]+"  '{for (driveCnt = 1; driveCnt <= NF; driveCnt++) printf "-p %s ",$driveCnt}')"
     echo "command[check_disk]=$NAGIOS_PLUGINS_DIR/check_disk -w 20% -c 10% $NAGIOS_DRIVES" | tee $NAGIOS_CONF_DIR/nrpe.d/disk.cfg > /dev/null
+fi
+
+# Set permission for fleet and docker socket
+if [ -S "${MNT_PATH}/var/run/fleet.sock" ]; then
+    chmod a+rw ${MNT_PATH}/var/run/fleet.sock
+fi
+
+if [ -S "${MNT_PATH}/var/run/docker.sock" ]; then
+    chmod a+rw ${MNT_PATH}/var/run/docker.sock
 fi
 
 # Start NREP Server

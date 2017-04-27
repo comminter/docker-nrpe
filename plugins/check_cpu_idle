@@ -1,0 +1,39 @@
+#!/bin/sh
+# Version 1.2
+#
+#	### History ###
+# V1.0		Initial Stable Release
+# V1.1		Fixed top non-tty display problem
+# V1.2		Fixed desimo problem
+# V1.3		Fixed alert problem (shoudl be less than 20% than alert, not higher than 20%)
+
+if [ "$1" = "-w" ] && [ "$2" -gt "0" ] && [ "$3" = "-c" ] && [ "$4" -gt "0" ] ; then
+	warn=$2
+	crit=$4
+	IDLE=$(top -b -n2|grep Cpu|tail -1|cut -d'.' -f4|cut -d',' -f2|egrep -o [0-9]+)||exit 3
+#	echo "DEBUG:	IDLE:$IDLE"
+        if [ $warn -gt $IDLE ];then
+                if [ $crit -gt $IDLE ]; then
+                echo "CRITICAL - CPU Idle = $IDLE %|CPU Idle=$IDLE;;;;"
+                exit 2
+        else
+                echo "WARNING - CPU Idle = $IDLE %|CPU Idle=$IDLE;;;;"
+                exit 1
+        fi
+else
+		echo "OK - CPU Idle = $IDLE %|CPU Idle=$IDLE;;;;"
+        exit 0
+fi
+	
+else
+        echo "check_cpu_idle.sh - Nagios Plugin for checking CPU idle percentage "
+        echo ""
+        echo "Usage:	check_cpu_idle.sh -w <warnlevel> -c <critlevel>"
+        echo "	= warnlevel and critlevel is warning and critical value for alerts. It send alert if idle is less than the value"
+        echo ""
+        echo "EXAMPLE:  /usr/lib64/nagios/plugins/check_bandwidth.sh -w 30 -c 20 "
+	echo "	= This will send warning alert when idle percentage is less than 30% and critical alert when less than 20%"
+        echo ""
+        exit 3
+fi
+
